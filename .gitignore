@@ -1,0 +1,15 @@
+venv/
+__pycache__/
+*.pyc
+
+# Data and reports
+data/*.csv
+reports/*.pdf
+reports/*.md
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Streamlit cache
+.streamlit/
