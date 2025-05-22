@@ -105,20 +105,73 @@ def display_missing_values(df):
 
 def display_outliers(df):
     st.subheader("🚨 Outlier Detection")
-    if not df.select_dtypes(include=np.number).empty:  # Check for numerical columns
-        outliers = eda_core.detect_outliers(df, output_dir="reports/boxplots")
-        if outliers:
-            st.json(outliers)
-        else:
-            st.info("✅ No outliers found.")
+    
+    # Get AI suggestions for outliers
+    suggestions = auto_analyzer.analyze_dataset(df)
+    outlier_suggestion = suggestions.get("Outliers", None)
+
+    if outlier_suggestion:
+        st.info(outlier_suggestion['message'])
+        st.info(outlier_suggestion['recommendation'])
 
         st.markdown("### 📊 Boxplots")
-        for col in outliers:
-            img_path = f"reports/boxplots/boxplot_{col}.png"
-            if os.path.exists(img_path):
-                st.image(img_path, caption=f"Boxplot for {col}", use_column_width=True)
+        # Outlier detection and boxplot saving (using IQR as before)
+        # This part still uses the IQR method for visualization purposes
+        if not df.select_dtypes(include=np.number).empty:
+            outliers_iqr = eda_core.detect_outliers(df, output_dir="reports/boxplots") # This is for visualization
+            for col in outliers_iqr:
+                img_path = f"reports/boxplots/boxplot_{col}.png"
+                if os.path.exists(img_path):
+                    st.image(img_path, caption=f"Boxplot for {col}", use_column_width=True)
+        else:
+            st.warning("⚠️ No numerical columns found for outlier visualization.")
+
+        st.markdown("### 🧹 Handle Outliers")
+        
+        # Create tabs for different handling strategies
+        tab1, tab2 = st.tabs(["⚙️ Manual Settings", "📈 Preview"])
+        
+        with tab1:
+            st.markdown("#### ⚙️ Manual Settings")
+            strategy = st.selectbox(
+                "Select Outlier Handling Strategy",
+                ['remove', 'replace_boundary', 'custom'],
+                help="Choose how to handle detected outliers"
+            )
+            
+            if strategy == "custom":
+                custom_value = st.text_input("Enter custom value to replace outliers:")
+                # Ensure custom_value is a valid number if replacing numerical outliers
+                try:
+                    custom_value = float(custom_value)
+                except ValueError:
+                    custom_value = None # Or handle as an error
+                    st.warning("Please enter a valid number for custom replacement.")
+
+                if st.button("Apply Custom Value", key="apply_custom_outlier"):
+                     if custom_value is not None:
+                        df = auto_analyzer.handle_outliers(df, strategy='custom', custom_value=custom_value)
+                        st.success("Applied custom value outlier handling")
+                     else:
+                         st.error("Invalid custom value entered.")
+                         
+            else:
+                if st.button("Apply Strategy", key="apply_selected_outlier_strategy"):
+                    df = auto_analyzer.handle_outliers(df, strategy=strategy)
+                    st.success(f"Applied {strategy} outlier handling")
+        
+        with tab2:
+            st.markdown("#### 📈 Data Preview")
+            st.dataframe(df.head())
+            # Optionally show outlier detection results again after handling
+            # This might require re-running detection on the modified DF
+            # For now, just show the head
+            st.info("Preview shows the first few rows after outlier handling.")
+
     else:
-        st.warning("⚠️ No numerical columns found for outlier detection.")
+        st.info("✅ No significant outliers detected by Isolation Forest.")
+    
+    return df
 
 
 def export_cleaned_data(df):
@@ -149,7 +202,7 @@ if uploaded_file:
         st.success("✅ AI Models Trained!")
 
         df = display_missing_values(df)
-        display_outliers(df)
+        df = display_outliers(df)
 
         # AI-Powered Suggestions
         st.subheader("🤖 AI-Powered Cleaning Suggestions")

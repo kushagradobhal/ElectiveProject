@@ -63,14 +63,16 @@ def load_models():
     try:
         iso_model = load(ISOLATION_MODEL)
         knn_imputer = load(IMPUTER_MODEL)
-        scaler = load(SCALER_MODEL)  # Load the scaler
+        scaler = load(SCALER_MODEL)
         logging.info("Models loaded successfully.")
-        return iso_model, knn_imputer, scaler  # Return the scaler
+        return iso_model, knn_imputer, scaler
     except FileNotFoundError:
         logging.error("Model file not found. Ensure models have been trained.")
+        # Ensure we always return 3 values, even if None
         return None, None, None
     except Exception as e:
         logging.error(f"Error loading models: {e}", exc_info=True)
+        # Ensure we always return 3 values, even if None
         return None, None, None
 
 def handle_missing_values(df, strategy='auto', custom_value=None):
@@ -137,6 +139,97 @@ def handle_missing_values(df, strategy='auto', custom_value=None):
         logging.error(f"Error in handle_missing_values: {e}", exc_info=True)
         return df
 
+def handle_outliers(df, strategy='remove', custom_value=None):
+    """
+    Handles outliers using various strategies based on Isolation Forest predictions.
+    
+    Args:
+        df (pd.DataFrame): Input DataFrame
+        strategy (str): One of ['remove', 'replace_boundary', 'custom']
+        custom_value: Value to use when strategy is 'custom'
+    
+    Returns:
+        pd.DataFrame: DataFrame with outliers handled
+    """
+    try:
+        print("Entering handle_outliers function") # Added print statement
+        df_copy = df.copy()
+        num_cols = df_copy.select_dtypes(include=np.number).columns
+        
+        if num_cols.empty:
+            logging.warning("No numerical columns found for outlier handling.")
+            return df
+
+        logging.info("Calling load_models() in handle_outliers...")
+        loaded_models = load_models()
+        logging.info(f"Returned from load_models(): Type={type(loaded_models).__name__}, Length={len(loaded_models) if isinstance(loaded_models, (list, tuple)) else 'N/A'}")
+
+        # Defensive check for unpacking - expect 3 items
+        if not (isinstance(loaded_models, tuple) and len(loaded_models) == 3):
+             logging.error(f"Expected a tuple of 3 models from load_models(), but got {type(loaded_models).__name__} with length {len(loaded_models) if isinstance(loaded_models, (list, tuple)) else 'N/A'}.")
+             return df # Return original df on unexpected load failure
+
+        logging.info("Attempting to unpack loaded_models...")
+        iso_model, knn_imputer, scaler = loaded_models # Unpack all 3
+        logging.info("Successfully unpacked models.")
+
+        # Now check if the specific models needed are None
+        if iso_model is None or scaler is None:
+            logging.error("Isolation Forest model or scaler is None after loading.")
+            return df
+
+        # Need to impute numerical data before scaling for outlier prediction
+        imputer = SimpleImputer(strategy=IMPUTER_STRATEGY) # Use the default imputer strategy
+        X = df_copy[num_cols].copy()
+        X[num_cols] = imputer.fit_transform(X[num_cols])
+
+        X[num_cols] = scaler.transform(X[num_cols]) # Scale the data
+        
+        # Get outlier predictions (-1 for outliers, 1 for inliers)
+        outlier_preds = iso_model.predict(X)
+        outlier_mask = (outlier_preds == -1)
+
+        if strategy == 'remove':
+            # Remove rows where Isolation Forest predicted an outlier
+            df_cleaned = df_copy[~outlier_mask].reset_index(drop=True)
+            logging.info(f"Removed {outlier_mask.sum()} outliers.")
+            return df_cleaned
+            
+        elif strategy == 'replace_boundary':
+            # Replace outliers with boundary values (using IQR for simplicity here, 
+            # as Isolation Forest doesn't directly provide boundaries)
+            # Note: A more sophisticated approach might involve understanding the distribution 
+            # learned by Isolation Forest, but IQR is a common practical approach for boundary replacement.
+            for col in num_cols:
+                Q1 = df_copy[col].quantile(0.25)
+                Q3 = df_copy[col].quantile(0.75)
+                IQR = Q3 - Q1
+                lower_bound = Q1 - 1.5 * IQR
+                upper_bound = Q3 + 1.5 * IQR
+                
+                # Replace values below lower bound with lower bound
+                df_copy.loc[df_copy[col] < lower_bound, col] = lower_bound
+                # Replace values above upper bound with upper bound
+                df_copy.loc[df_copy[col] > upper_bound, col] = upper_bound
+                
+            logging.info(f"Replaced outliers with boundary values.")
+            return df_copy
+            
+        elif strategy == 'custom' and custom_value is not None:
+            # Replace outliers with a custom value
+            for col in num_cols:
+                df_copy.loc[outlier_mask, col] = custom_value
+            logging.info(f"Replaced outliers with custom value: {custom_value}.")
+            return df_copy
+            
+        else:
+            logging.warning(f"Unknown outlier handling strategy: {strategy}. Returning original DataFrame.")
+            return df_copy
+            
+    except Exception as e:
+        logging.error(f"Error in handle_outliers: {e}", exc_info=True)
+        return df
+
 def analyze_dataset(df):
     """
     Analyzes dataset and returns a dictionary of AI-powered cleaning suggestions.
@@ -145,8 +238,22 @@ def analyze_dataset(df):
     num_cols = df.select_dtypes(include=np.number).columns
 
     # Load models
-    iso_model, knn_imputer, scaler = load_models()
+    logging.info("Calling load_models() in analyze_dataset...") # Added logging
+    loaded_models = load_models()
+    logging.info(f"Returned from load_models() in analyze_dataset: Type={type(loaded_models).__name__}, Length={len(loaded_models) if isinstance(loaded_models, (list, tuple)) else 'N/A'}") # Added logging
+
+    # Defensive check for unpacking - expect 3 items
+    if not (isinstance(loaded_models, tuple) and len(loaded_models) == 3):
+        logging.error(f"Expected a tuple of 3 models from load_models() in analyze_dataset, but got {type(loaded_models).__name__} with length {len(loaded_models) if isinstance(loaded_models, (list, tuple)) else 'N/A'}.") # Modified logging
+        return suggestions # Return empty suggestions on unexpected load failure
+
+    logging.info("Attempting to unpack loaded_models in analyze_dataset...") # Added logging
+    iso_model, knn_imputer, scaler = loaded_models # Unpack all 3
+    logging.info("Successfully unpacked models in analyze_dataset.") # Added logging
+
+    # Now check if any of the specific models needed are None
     if iso_model is None or knn_imputer is None or scaler is None:
+        logging.warning("One or more models are None after loading in analyze_dataset.") # Added logging
         return suggestions
 
     # Predict outliers
