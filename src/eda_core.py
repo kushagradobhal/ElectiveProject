@@ -5,12 +5,37 @@ import seaborn as sns
 import os
 
 def get_summary_statistics(df):
-    """Returns descriptive statistics."""
+    """Returns descriptive statistics and data quality profiling."""
     try:
-        return df.describe(include='all')
+        summary = pd.DataFrame(index=df.columns)
+        summary['Data Type'] = df.dtypes.astype(str)
+        summary['Classified Type'] = classify_column_types(df).values()
+        summary['Non-Null Count'] = df.notnull().sum()
+        summary['Null Count'] = df.isnull().sum()
+        summary['Null Percentage (%)'] = (df.isnull().sum() / len(df)) * 100
+        summary['Unique Count'] = df.nunique()
+        summary['Duplicate Count'] = df.duplicated().sum() # Row-wise duplicates, per column doesn't make sense here
+
+        # Add descriptive statistics based on type
+        for col in df.columns:
+            if summary.loc[col, 'Classified Type'] == 'Numerical':
+                summary.loc[col, 'Mean'] = df[col].mean()
+                summary.loc[col, 'Median'] = df[col].median()
+                summary.loc[col, 'Standard Deviation'] = df[col].std()
+                summary.loc[col, 'Min'] = df[col].min()
+                summary.loc[col, 'Max'] = df[col].max()
+                summary.loc[col, 'Skewness'] = df[col].skew()
+                summary.loc[col, 'Kurtosis'] = df[col].kurtosis()
+            elif summary.loc[col, 'Classified Type'] == 'Categorical' or summary.loc[col, 'Classified Type'] == 'Text':
+                 mode_result = df[col].mode()
+                 if not mode_result.empty:
+                     summary.loc[col, 'Most Frequent Value'] = mode_result.iloc[0]
+                     summary.loc[col, 'Frequency'] = df[col].value_counts().iloc[0]
+
+        return summary
     except Exception as e:
         print(f"Error in get_summary_statistics: {e}")
-        return None  # Or raise the exception if you want the app to halt
+        return pd.DataFrame()  # Return empty DataFrame on error
 
 
 def get_basic_info(df):
@@ -24,6 +49,29 @@ def get_basic_info(df):
     except Exception as e:
         print(f"Error in get_basic_info: {e}")
         return None
+
+
+def classify_column_types(df):
+    """
+    Classifies columns into Numerical, Categorical, Text, and Datetime.
+    """
+    column_types = {}
+    for col in df.columns:
+        dtype = df[col].dtype
+        if pd.api.types.is_numeric_dtype(dtype):
+            column_types[col] = 'Numerical'
+        elif pd.api.types.is_datetime64_any_dtype(dtype):
+            column_types[col] = 'Datetime'
+        elif pd.api.types.is_categorical_dtype(dtype) or dtype == 'object':
+            # Further classify object types as Categorical or Text
+            # This is a basic approach; more sophisticated text detection might be needed later
+            if df[col].nunique() < 50 and len(df) / df[col].nunique() > 10: # Heuristic for categorical
+                column_types[col] = 'Categorical'
+            else:
+                column_types[col] = 'Text' # Default to Text if not clearly categorical
+        else:
+            column_types[col] = str(dtype) # Fallback to pandas dtype string
+    return column_types
 
 
 def get_missing_values(df):
@@ -63,6 +111,35 @@ def get_duplicate_info(df):
         return 0
 
 
+def detect_outliers_zscore(df, threshold=3):
+    """
+    Detects outliers using Z-Score.
+    
+    Args:
+        df (pd.DataFrame): Input DataFrame.
+        threshold (float): Z-score threshold to consider a value an outlier.
+        
+    Returns:
+        dict: A dictionary with column names and the count of outliers detected.
+    """
+    outliers = {}
+    num_cols = df.select_dtypes(include=np.number).columns
+    
+    if num_cols.empty:
+        return outliers
+        
+    for col in num_cols:
+        # Calculate Z-scores, ignoring NaNs
+        z_scores = np.abs((df[col] - df[col].mean()) / df[col].std())
+        # Count outliers based on threshold, ignoring NaNs in the original column
+        outlier_mask = (z_scores > threshold) & (df[col].notna())
+        count = outlier_mask.sum()
+        if count > 0:
+            outliers[col] = int(count)
+            
+    return outliers
+
+
 def detect_outliers(df, output_dir):
     """Detects outliers using IQR and saves boxplots."""
     try:
@@ -94,3 +171,65 @@ def save_boxplot(df, col, output_dir):
         plt.close()
     except Exception as e:
         print(f"Error in save_boxplot: {e}")
+
+
+def generate_density_summary(df):
+    """
+    Generates natural-language summaries of value density for numerical columns.
+    """
+    density_summaries = {}
+    num_cols = df.select_dtypes(include=np.number).columns
+
+    if num_cols.empty:
+        return density_summaries
+
+    for col in num_cols:
+        # Calculate 25th and 75th percentiles
+        Q1 = df[col].quantile(0.25)
+        Q3 = df[col].quantile(0.75)
+
+        # Handle cases with insufficient data or constant values
+        if pd.isna(Q1) or pd.isna(Q3) or Q1 == Q3:
+            summary = f"Distribution for '{col}' could not be summarized." # Or provide a different summary
+        else:
+            summary = f"Approximately 50% of values in '{col}' are concentrated between {Q1:.2f} and {Q3:.2f}."
+
+        density_summaries[col] = summary
+
+    return density_summaries
+
+def save_histogram(df, col, output_dir):
+    """
+    Saves a histogram for a numerical column.
+    """
+    try:
+        plt.figure(figsize=(8, 4))
+        sns.histplot(df[col].dropna(), kde=True)
+        plt.title(f'Histogram of {col}')
+        plt.xlabel(col)
+        plt.ylabel('Frequency')
+        plt.savefig(os.path.join(output_dir, f"histogram_{col}.png"))
+        plt.close()
+    except Exception as e:
+        print(f"Error in save_histogram for {col}: {e}")
+
+def save_bar_chart(df, col, output_dir, top_n=10):
+    """
+    Saves a bar chart for a categorical column (shows top_n value counts).
+    """
+    try:
+        plt.figure(figsize=(8, 4))
+        # Get top N values, handle potential NaNs
+        top_values = df[col].value_counts().nlargest(top_n).index.tolist()
+        # Filter dataframe to include only top values for consistent plotting
+        df_filtered = df[df[col].isin(top_values)]
+        
+        sns.countplot(data=df_filtered, y=col, order=top_values)
+        plt.title(f'Top {top_n} Categories in {col}')
+        plt.xlabel('Count')
+        plt.ylabel(col)
+        plt.tight_layout() # Adjust layout to prevent labels overlapping
+        plt.savefig(os.path.join(output_dir, f"bar_chart_{col}.png"))
+        plt.close()
+    except Exception as e:
+        print(f"Error in save_bar_chart for {col}: {e}")

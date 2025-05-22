@@ -5,3 +5,4 @@ matplotlib
 seaborn
 pdfkit
 scikit-learn
+missingno

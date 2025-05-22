@@ -304,3 +304,255 @@ def analyze_dataset(df):
         }
 
     return suggestions
+
+def drop_columns(df, columns_to_drop):
+    """
+    Drops the specified columns from the DataFrame.
+    
+    Args:
+        df (pd.DataFrame): Input DataFrame.
+        columns_to_drop (list): List of column names to drop.
+        
+    Returns:
+        pd.DataFrame: DataFrame with specified columns dropped.
+    """
+    try:
+        df_cleaned = df.drop(columns=columns_to_drop, errors='ignore')
+        print(f"Dropped columns: {columns_to_drop}") # Use print for immediate feedback in terminal
+        return df_cleaned
+    except Exception as e:
+        print(f"Error dropping columns: {e}")
+        return df # Return original df on error
+
+def convert_column_dtype(df, column, target_dtype):
+    """
+    Converts the data type of a specified column.
+    
+    Args:
+        df (pd.DataFrame): Input DataFrame.
+        column (str): Name of the column to convert.
+        target_dtype (str): The target data type (e.g., 'int', 'float', 'str', 'datetime64').
+        
+    Returns:
+        pd.DataFrame: DataFrame with the column's data type converted, or original DataFrame on error.
+        str: A message indicating success or failure.
+    """
+    df_copy = df.copy()
+    message = ""
+    try:
+        # Attempt conversion
+        if target_dtype == 'datetime64':
+            # Use pandas.to_datetime for datetime conversion, which is more flexible
+            df_copy[column] = pd.to_datetime(df_copy[column], errors='coerce')
+            # Check if conversion resulted in all NaT (Not a Time)
+            if df_copy[column].isnull().all() and not df[column].isnull().all():
+                 message = f"Warning: Could not convert all values in '{column}' to datetime. Some values resulted in NaT."
+            else:
+                message = f"Successfully converted column '{column}' to {target_dtype}."
+        else:
+            # Use astype for other types
+            df_copy[column] = df_copy[column].astype(target_dtype)
+            message = f"Successfully converted column '{column}' to {target_dtype}."
+
+    except ValueError as e:
+        message = f"Error converting column '{column}' to {target_dtype}: {e}. Data type conversion failed for some values."
+        df_copy = df # Revert to original df on conversion error
+    except Exception as e:
+        message = f"An unexpected error occurred while converting column '{column}': {e}"
+        df_copy = df # Revert to original df on error
+
+    return df_copy, message
+
+def rename_column(df, old_column_name, new_column_name):
+    """
+    Renames a specified column in the DataFrame.
+    
+    Args:
+        df (pd.DataFrame): Input DataFrame.
+        old_column_name (str): The current name of the column.
+        new_column_name (str): The new name for the column.
+        
+    Returns:
+        pd.DataFrame: DataFrame with the column renamed, or original DataFrame on error.
+        str: A message indicating success or failure.
+    """
+    df_copy = df.copy()
+    message = ""
+    try:
+        if old_column_name in df_copy.columns:
+            if old_column_name != new_column_name and new_column_name not in df_copy.columns:
+                df_copy = df_copy.rename(columns={old_column_name: new_column_name})
+                message = f"Successfully renamed column '{old_column_name}' to '{new_column_name}'."
+            elif old_column_name == new_column_name:
+                message = f"Column '{old_column_name}' is already named '{new_column_name}'. No action taken."
+            else:
+                message = f"Error renaming column '{old_column_name}': New name '{new_column_name}' already exists or is invalid."
+        else:
+            message = f"Error renaming column: Column '{old_column_name}' not found."
+
+    except Exception as e:
+        message = f"An unexpected error occurred while renaming column '{old_column_name}': {e}"
+
+    return df_copy, message
+
+def generate_cleaning_config(df, session_state):
+    """
+    Generates a JSON-serializable dictionary of the current cleaning configuration.
+    Reads state from Streamlit's session_state based on widget keys.
+    
+    Args:
+        df (pd.DataFrame): The current DataFrame (used to get column names if needed, though mostly using session_state).
+        session_state: Streamlit's session_state object.
+        
+    Returns:
+        dict: A dictionary representing the cleaning configuration.
+    """
+    config = {
+        "missing_values": {},
+        "outliers": {},
+        "custom_operations": {
+            "drop_columns": [],
+            "type_conversions": [],
+            "rename_columns": []
+        }
+    }
+
+    # Missing Values Configuration
+    mv_strategy = session_state.get('missing_value_strategy_selectbox')
+    config["missing_values"]["strategy"] = mv_strategy
+    if mv_strategy == 'custom':
+        config["missing_values"]["custom_value"] = session_state.get('missing_value_custom_textinput')
+
+    # Outliers Configuration
+    outlier_strategy = session_state.get('outlier_handling_strategy_selectbox')
+    config["outliers"]["strategy"] = outlier_strategy
+    if outlier_strategy == 'custom':
+        config["outliers"]["custom_value"] = session_state.get('outlier_custom_textinput') # Need to add key to outlier custom text input
+
+    # Custom Column-wise Operations Configuration
+    config["custom_operations"]["drop_columns"] = session_state.get('columns_to_drop_multiselect', [])
+
+    # Note: Capturing individual type conversions and renames is more complex
+    # as the UI applies them immediately. A full configuration would need to log actions.
+    # For a simpler approach based on current UI state, we can only capture the *selections*.
+    # A more robust implementation would track applied transformations sequentially.
+    # For now, we'll note that type conversions and renames are applied immediately
+    # and not easily represented as a pending configuration in this UI structure.
+    # A full config would require storing a list of transformation steps.
+
+    # Placeholder for future list of transformations
+    config["transformations_log"] = [] # This would store applied steps like {type: 'rename', column: 'old', new_name: 'new'}
+
+    # You would populate transformations_log as actions are applied in the UI
+    # Example (conceptual): when 'Rename Column' is clicked,
+    # append {'type': 'rename', 'column': old_name, 'new_name': new_name} to session_state['transformations_log']
+
+    return config
+
+def save_cleaning_config(config, filename):
+    """
+    Saves a cleaning configuration to a JSON file.
+    
+    Args:
+        config (dict): The cleaning configuration dictionary.
+        filename (str): The name of the file to save to.
+        
+    Returns:
+        bool: True if successful, False otherwise.
+        str: A message indicating success or failure.
+    """
+    try:
+        import json
+        with open(filename, 'w') as f:
+            json.dump(config, f, indent=4)
+        return True, f"Successfully saved cleaning configuration to {filename}"
+    except Exception as e:
+        return False, f"Error saving configuration: {str(e)}"
+
+def load_cleaning_config(filename):
+    """
+    Loads a cleaning configuration from a JSON file.
+    
+    Args:
+        filename (str): The name of the file to load from.
+        
+    Returns:
+        tuple: (config_dict, success_message) or (None, error_message)
+    """
+    try:
+        import json
+        with open(filename, 'r') as f:
+            config = json.load(f)
+        return config, f"Successfully loaded cleaning configuration from {filename}"
+    except FileNotFoundError:
+        return None, f"Configuration file {filename} not found"
+    except json.JSONDecodeError:
+        return None, f"Invalid JSON format in {filename}"
+    except Exception as e:
+        return None, f"Error loading configuration: {str(e)}"
+
+def apply_cleaning_config(df, config):
+    """
+    Applies a cleaning configuration to a DataFrame.
+    
+    Args:
+        df (pd.DataFrame): The DataFrame to clean.
+        config (dict): The cleaning configuration dictionary.
+        
+    Returns:
+        pd.DataFrame: The cleaned DataFrame.
+        str: A message indicating success or failure.
+    """
+    try:
+        df_cleaned = df.copy()
+        messages = []
+
+        # Apply missing values handling
+        if "missing_values" in config:
+            mv_config = config["missing_values"]
+            strategy = mv_config.get("strategy", "auto")
+            custom_value = mv_config.get("custom_value")
+            df_cleaned = handle_missing_values(df_cleaned, strategy, custom_value)
+            messages.append(f"Applied missing values strategy: {strategy}")
+
+        # Apply outlier handling
+        if "outliers" in config:
+            outlier_config = config["outliers"]
+            strategy = outlier_config.get("strategy", "remove")
+            custom_value = outlier_config.get("custom_value")
+            df_cleaned = handle_outliers(df_cleaned, strategy, custom_value)
+            messages.append(f"Applied outlier handling strategy: {strategy}")
+
+        # Apply custom operations
+        if "custom_operations" in config:
+            custom_ops = config["custom_operations"]
+            
+            # Drop columns
+            if "drop_columns" in custom_ops:
+                columns_to_drop = custom_ops["drop_columns"]
+                if columns_to_drop:
+                    df_cleaned = drop_columns(df_cleaned, columns_to_drop)
+                    messages.append(f"Dropped columns: {', '.join(columns_to_drop)}")
+
+            # Type conversions
+            if "type_conversions" in custom_ops:
+                for conv in custom_ops["type_conversions"]:
+                    column = conv.get("column")
+                    target_dtype = conv.get("target_dtype")
+                    if column and target_dtype:
+                        df_cleaned, msg = convert_column_dtype(df_cleaned, column, target_dtype)
+                        messages.append(msg)
+
+            # Rename columns
+            if "rename_columns" in custom_ops:
+                for rename in custom_ops["rename_columns"]:
+                    old_name = rename.get("old_name")
+                    new_name = rename.get("new_name")
+                    if old_name and new_name:
+                        df_cleaned, msg = rename_column(df_cleaned, old_name, new_name)
+                        messages.append(msg)
+
+        return df_cleaned, "\n".join(messages)
+
+    except Exception as e:
+        return df, f"Error applying cleaning configuration: {str(e)}"
