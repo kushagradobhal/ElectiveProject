@@ -42,19 +42,64 @@ def display_missing_values(df):
     missing = eda_core.get_missing_values(df)
     if not missing.empty:
         st.dataframe(missing)
+        
+        st.markdown("### 🧹 Handle Missing Data")
+        
+        # Get AI suggestions
+        suggestions = auto_analyzer.analyze_dataset(df)
+        
+        # Create tabs for different handling strategies
+        tab1, tab2, tab3 = st.tabs(["📊 AI Recommendations", "⚙️ Manual Settings", "📈 Preview"])
+        
+        with tab1:
+            st.markdown("#### 🤖 AI-Powered Recommendations")
+            for col, suggestion in suggestions.items():
+                if col != "Outliers":  # Skip outlier suggestions
+                    st.markdown(f"**{col}**")
+                    st.markdown(f"- Missing: {suggestion['missing_count']} values ({suggestion['missing_percent']:.1f}%)")
+                    st.markdown(f"- Type: {suggestion['type']}")
+                    st.markdown(f"- Recommendation: {suggestion['recommendation']}")
+                    
+                    # Add apply button for each recommendation
+                    if st.button(f"Apply Recommendation for {col}", key=f"apply_{col}"):
+                        if "KNN" in suggestion['recommendation']:
+                            df = auto_analyzer.handle_missing_values(df, strategy='knn')
+                        elif "mean" in suggestion['recommendation'].lower():
+                            df = auto_analyzer.handle_missing_values(df, strategy='mean')
+                        elif "mode" in suggestion['recommendation'].lower():
+                            df = auto_analyzer.handle_missing_values(df, strategy='mode')
+                        st.success(f"Applied recommendation for {col}")
+        
+        with tab2:
+            st.markdown("#### ⚙️ Manual Settings")
+            strategy = st.selectbox(
+                "Select Imputation Strategy",
+                ["auto", "knn", "mean", "median", "mode", "custom", "drop"],
+                help="Choose how to handle missing values"
+            )
+            
+            if strategy == "custom":
+                custom_value = st.text_input("Enter custom value to fill missing cells:")
+                if st.button("Apply Custom Value"):
+                    df = auto_analyzer.handle_missing_values(df, strategy='custom', custom_value=custom_value)
+                    st.success("Applied custom value imputation")
+            else:
+                if st.button("Apply Strategy"):
+                    df = auto_analyzer.handle_missing_values(df, strategy=strategy)
+                    st.success(f"Applied {strategy} imputation")
+        
+        with tab3:
+            st.markdown("#### 📈 Data Preview")
+            st.dataframe(df.head())
+            st.markdown("##### Missing Values After Imputation")
+            missing_after = eda_core.get_missing_values(df)
+            if missing_after.empty:
+                st.success("✅ No missing values remaining!")
+            else:
+                st.dataframe(missing_after)
     else:
         st.success("✅ No missing values found!")
-
-    st.markdown("### 🧹 Handle Missing Data")
-    option = st.radio("Choose cleaning method", ["None", "Drop rows", "Fill with value"])
-    if option == "Drop rows":
-        df = eda_core.clean_missing_values(df, method='drop')
-        st.success("✅ Dropped rows with missing values.")
-    elif option == "Fill with value":
-        fill_value = st.text_input("Enter value to fill missing cells:")
-        if fill_value:
-            df = eda_core.clean_missing_values(df, method='fill', fill_value=fill_value)
-            st.success("✅ Missing values filled.")
+    
     return df
 
 
@@ -97,30 +142,34 @@ if uploaded_file:
         st.write(f"🧮 Shape: {df.shape}")
 
         display_data_summary(df)
+        
+        # Train AI Models immediately after file upload
+        with st.spinner("Training AI Models..."):
+            auto_analyzer.train_models(df.copy())  # Train models on the uploaded data
+        st.success("✅ AI Models Trained!")
+
         df = display_missing_values(df)
         display_outliers(df)
 
         # AI-Powered Suggestions
         st.subheader("🤖 AI-Powered Cleaning Suggestions")
-        train_models = st.checkbox("Train AI Models")  # Add checkbox
+        # Removed the checkbox as training is now automatic
+        # train_models = st.checkbox("Train AI Models")  
 
-        if train_models:
-            with st.spinner("Training AI Models..."):  # Show spinner
-                auto_analyzer.train_models(df.copy())  # Train models
-            st.success("✅ AI Models Trained!")
+        # suggestions = auto_analyzer.analyze_dataset(df)  # Get suggestions - This is now called inside display_missing_values
 
-        suggestions = auto_analyzer.analyze_dataset(df)  # Get suggestions
-
-        if suggestions:
-            for col, suggestion in suggestions.items():
-                st.write(f"**Column: {col}**")
-                if isinstance(suggestion, dict):  # Check if it's a column suggestion
-                    st.write(f"- Issue: {suggestion['missing']}")
-                    st.write(f"- Recommendation: {suggestion['recommendation']}")
-                else:  # It's the general "Outliers" suggestion
-                    st.write(f"- Suggestion: {suggestion}")
-        else:
-            st.info("No AI-powered suggestions at this time.")
+        # Removed the code block that iterated through suggestions here
+        # It is now handled within the display_missing_values function
+        # if suggestions:
+        #     for col, suggestion in suggestions.items():
+        #         st.write(f"**Column: {col}**")
+        #         if isinstance(suggestion, dict):  # Check if it's a column suggestion
+        #             st.write(f"- Issue: {suggestion['missing']}")
+        #             st.write(f"- Recommendation: {suggestion['recommendation']}")
+        #         else:  # It's the general "Outliers" suggestion
+        #             st.write(f"- Suggestion: {suggestion}")
+        # else:
+        #     st.info("No AI-powered suggestions at this time.")
 
         export_cleaned_data(df)
 

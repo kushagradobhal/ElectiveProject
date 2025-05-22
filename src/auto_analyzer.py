@@ -73,6 +73,70 @@ def load_models():
         logging.error(f"Error loading models: {e}", exc_info=True)
         return None, None, None
 
+def handle_missing_values(df, strategy='auto', custom_value=None):
+    """
+    Handles missing values using various strategies.
+    
+    Args:
+        df (pd.DataFrame): Input DataFrame
+        strategy (str): One of ['auto', 'knn', 'mean', 'median', 'mode', 'custom', 'drop']
+        custom_value: Value to use when strategy is 'custom'
+    
+    Returns:
+        pd.DataFrame: DataFrame with missing values handled
+    """
+    try:
+        df_copy = df.copy()
+        num_cols = df_copy.select_dtypes(include=np.number).columns
+        cat_cols = df_copy.select_dtypes(include=['object', 'category']).columns
+        
+        if strategy == 'drop':
+            return df_copy.dropna()
+            
+        elif strategy == 'auto':
+            # Use KNN for numerical columns and mode for categorical
+            if not num_cols.empty:
+                knn_imputer = load(IMPUTER_MODEL)
+                if knn_imputer is not None:
+                    df_copy[num_cols] = knn_imputer.transform(df_copy[num_cols])
+                else:
+                    # Fallback to mean if KNN model not available
+                    df_copy[num_cols] = SimpleImputer(strategy='mean').fit_transform(df_copy[num_cols])
+            
+            # Use mode for categorical columns
+            for col in cat_cols:
+                mode_value = df_copy[col].mode()[0] if not df_copy[col].mode().empty else None
+                if mode_value is not None:
+                    df_copy[col] = df_copy[col].fillna(mode_value)
+                    
+        elif strategy == 'knn':
+            if not num_cols.empty:
+                knn_imputer = load(IMPUTER_MODEL)
+                if knn_imputer is not None:
+                    df_copy[num_cols] = knn_imputer.transform(df_copy[num_cols])
+                else:
+                    logging.warning("KNN imputer model not found. Falling back to mean imputation.")
+                    df_copy[num_cols] = SimpleImputer(strategy='mean').fit_transform(df_copy[num_cols])
+                    
+        elif strategy in ['mean', 'median']:
+            if not num_cols.empty:
+                df_copy[num_cols] = SimpleImputer(strategy=strategy).fit_transform(df_copy[num_cols])
+                
+        elif strategy == 'mode':
+            for col in df_copy.columns:
+                mode_value = df_copy[col].mode()[0] if not df_copy[col].mode().empty else None
+                if mode_value is not None:
+                    df_copy[col] = df_copy[col].fillna(mode_value)
+                    
+        elif strategy == 'custom' and custom_value is not None:
+            df_copy = df_copy.fillna(custom_value)
+            
+        return df_copy
+        
+    except Exception as e:
+        logging.error(f"Error in handle_missing_values: {e}", exc_info=True)
+        return df
+
 def analyze_dataset(df):
     """
     Analyzes dataset and returns a dictionary of AI-powered cleaning suggestions.
@@ -81,9 +145,9 @@ def analyze_dataset(df):
     num_cols = df.select_dtypes(include=np.number).columns
 
     # Load models
-    iso_model, knn_imputer, scaler = load_models()  # Load the scaler
+    iso_model, knn_imputer, scaler = load_models()
     if iso_model is None or knn_imputer is None or scaler is None:
-        return suggestions  # Return empty suggestions if models failed to load
+        return suggestions
 
     # Predict outliers
     if not num_cols.empty:
@@ -93,25 +157,43 @@ def analyze_dataset(df):
         X[num_cols] = imputer.fit_transform(X[num_cols])
 
         # Scale the data for Isolation Forest
-        X[num_cols] = scaler.transform(X[num_cols])  # Use transform, not fit_transform
+        X[num_cols] = scaler.transform(X[num_cols])
 
-        preds = iso_model.predict(X)  # -1 = outlier
+        preds = iso_model.predict(X)
         outlier_count = (preds == -1).sum()
         if outlier_count > 0:
-            suggestions["Outliers"] = f"{outlier_count} rows may be outliers (Isolation Forest)."
+            suggestions["Outliers"] = {
+                "count": outlier_count,
+                "message": f"{outlier_count} rows may be outliers (Isolation Forest).",
+                "recommendation": "Consider removing or investigating these outliers."
+            }
 
-    # Missing values
+    # Missing values analysis
     missing = df.isnull().sum()
+    missing_percent = (missing / len(df)) * 100
+    
     for col in missing[missing > 0].index:
-        if df[col].dtype in ["float64", "int64"]:
-            suggestion = f"Impute missing values in '{col}' using KNN imputer (n_neighbors={KNN_NEIGHBORS})"
-        elif pd.api.types.is_categorical_dtype(df[col]) or df[col].dtype == "object":
-            suggestion = f"For column '{col}', consider filling missing values with the mode (most frequent value)"
+        col_type = df[col].dtype
+        missing_count = missing[col]
+        missing_pct = missing_percent[col]
+        
+        if col_type in ["float64", "int64"]:
+            if missing_pct < 5:  # Less than 5% missing
+                suggestion = f"Fill missing values in '{col}' with mean (only {missing_pct:.1f}% missing)"
+            elif missing_pct < 30:  # Less than 30% missing
+                suggestion = f"Use KNN imputer for '{col}' ({missing_pct:.1f}% missing)"
+            else:  # More than 30% missing
+                suggestion = f"Consider dropping column '{col}' or using advanced imputation ({missing_pct:.1f}% missing)"
+        elif pd.api.types.is_categorical_dtype(col_type) or col_type == "object":
+            suggestion = f"Fill missing values in '{col}' with mode (most frequent value)"
         else:
-            suggestion = f"Consider how to best fill missing values in '{col}'" # More general case
+            suggestion = f"Investigate missing values in '{col}' ({missing_pct:.1f}% missing)"
+            
         suggestions[col] = {
-            "missing": f"{missing[col]} missing",
-            "recommendation": suggestion
+            "missing_count": int(missing_count),
+            "missing_percent": float(missing_pct),
+            "recommendation": suggestion,
+            "type": str(col_type)
         }
 
     return suggestions
