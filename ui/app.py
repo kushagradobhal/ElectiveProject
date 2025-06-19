@@ -3,30 +3,31 @@ import pandas as pd
 import os
 import sys
 import numpy as np
-import missingno as msno # Import missingno
+import missingno as msno 
 import matplotlib.pyplot as plt
+import datetime
 
-# Consider using relative imports or packaging for better structure
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from src import eda_core
-from src import auto_analyzer  # Import auto_analyzer
-from src import report_builder # Import report_builder
+from src import auto_analyzer  
+from src import report_builder 
 
 st.set_page_config(page_title="AutoEDA – AI-Powered Data Cleaner", layout="wide")
 st.title("📊 AutoEDA – Smart Data Cleaning & Report Generator")
 
-# File Upload
+
 uploaded_file = st.file_uploader("📁 Upload a CSV file", type=["csv"])
 
 
 def display_data_summary(df):
     st.subheader("📌 Basic Information")
-    if not df.empty:  # Check if DataFrame is empty
-        # Get basic info and column classifications
+    if not df.empty:  
+        
         basic_info = eda_core.get_basic_info(df)
         column_types = eda_core.classify_column_types(df)
         
-        # Combine basic info and column types for display
+        
         display_info = basic_info.copy()
         display_info["Classified Data Types"] = column_types
         
@@ -35,13 +36,13 @@ def display_data_summary(df):
         st.warning("⚠️ DataFrame is empty.")
 
     st.subheader("📈 Summary Statistics")
-    if not df.empty:  # Check if DataFrame is empty
+    if not df.empty:  
         st.dataframe(eda_core.get_summary_statistics(df))
     else:
         st.warning("⚠️ DataFrame is empty.")
 
     st.subheader("🧬 Duplicate Rows")
-    if not df.empty:  # Check if DataFrame is empty
+    if not df.empty:  
         duplicates = eda_core.get_duplicate_info(df)
         st.write(f"🔁 Total duplicate rows: {duplicates}")
     else:
@@ -56,51 +57,42 @@ def display_missing_values(df):
 
         st.markdown("#### Missing Value Visualizations")
         
-        # Missingno Matrix plot
+        
         st.write("**Missing Values Matrix:**")
-        # Need to save the plot to a file to display in Streamlit
+        
         matrix_plot = msno.matrix(df, figsize=(10, 4))
         matrix_plot_path = "reports/missingno_matrix.png"
-        # Ensure reports directory exists
+       
         os.makedirs("reports", exist_ok=True)
         matrix_plot.get_figure().savefig(matrix_plot_path)
         st.image(matrix_plot_path, use_container_width=True)
-        plt.close(matrix_plot.get_figure()) # Close the figure to free memory
+        plt.close(matrix_plot.get_figure()) 
 
-        # Missingno Bar plot
+       
         st.write("**Missing Values Bar Chart:**")
         bar_plot = msno.bar(df, figsize=(10, 4))
         bar_plot_path = "reports/missingno_bar.png"
         bar_plot.get_figure().savefig(bar_plot_path)
         st.image(bar_plot_path, use_container_width=True)
-        plt.close(bar_plot.get_figure()) # Close the figure
+        plt.close(bar_plot.get_figure()) 
         
-        # Optional: Missingno Heatmap (good for larger datasets to see correlations)
-        # st.write("**Missing Values Heatmap:**")
-        # heatmap_plot = msno.heatmap(df, figsize=(10, 4))
-        # heatmap_plot_path = "reports/missingno_heatmap.png"
-        # heatmap_plot.get_figure().savefig(heatmap_plot_path)
-        # st.image(heatmap_plot_path, use_container_width=True)
-        # plt.close(heatmap_plot.get_figure()) # Close the figure
         
         st.markdown("### 🧹 Handle Missing Data")
         
-        # Get AI suggestions
+       
         suggestions = auto_analyzer.analyze_dataset(df)
         
-        # Create tabs for different handling strategies
         tab1, tab2, tab3 = st.tabs(["📊 AI Recommendations", "⚙️ Manual Settings", "📈 Preview"])
         
         with tab1:
             st.markdown("#### 🤖 AI-Powered Recommendations")
             for col, suggestion in suggestions.items():
-                if col != "Outliers":  # Skip outlier suggestions
+                if col != "Outliers":  
                     st.markdown(f"**{col}**")
                     st.markdown(f"- Missing: {suggestion['missing_count']} values ({suggestion['missing_percent']:.1f}%)")
                     st.markdown(f"- Type: {suggestion['type']}")
                     st.markdown(f"- Recommendation: {suggestion['recommendation']}")
                     
-                    # Add apply button for each recommendation
                     if st.button(f"Apply Recommendation for {col}", key=f"apply_{col}"):
                         if "KNN" in suggestion['recommendation']:
                             df = auto_analyzer.handle_missing_values(df, strategy='knn')
@@ -109,6 +101,12 @@ def display_missing_values(df):
                         elif "mode" in suggestion['recommendation'].lower():
                             df = auto_analyzer.handle_missing_values(df, strategy='mode')
                         st.success(f"Applied recommendation for {col}")
+                        st.session_state['transformations_log'].append({
+                            'action_type': 'impute',
+                            'columns': [col],
+                            'parameters': {'strategy': strategy, 'custom_value': custom_value if strategy == 'custom' else None},
+                            'timestamp': datetime.datetime.now().isoformat()
+                        })
         
         with tab2:
             st.markdown("#### ⚙️ Manual Settings")
@@ -123,10 +121,22 @@ def display_missing_values(df):
                 if st.button("Apply Custom Value"):
                     df = auto_analyzer.handle_missing_values(df, strategy='custom', custom_value=custom_value)
                     st.success("Applied custom value imputation")
+                    st.session_state['transformations_log'].append({
+                        'action_type': 'impute',
+                        'columns': [col],
+                        'parameters': {'strategy': strategy, 'custom_value': custom_value},
+                        'timestamp': datetime.datetime.now().isoformat()
+                    })
             else:
                 if st.button("Apply Strategy"):
                     df = auto_analyzer.handle_missing_values(df, strategy=strategy)
                     st.success(f"Applied {strategy} imputation")
+                    st.session_state['transformations_log'].append({
+                        'action_type': 'impute',
+                        'columns': [col],
+                        'parameters': {'strategy': strategy, 'custom_value': None},
+                        'timestamp': datetime.datetime.now().isoformat()
+                    })
         
         with tab3:
             st.markdown("#### 📈 Data Preview")
@@ -145,9 +155,7 @@ def display_missing_values(df):
 
 def display_outliers(df):
     st.subheader("🚨 Outlier Detection")
-    
-    # Get AI suggestions for outliers (from Isolation Forest analysis)
-    # This also ensures models are loaded/trained if not already
+ 
     suggestions = auto_analyzer.analyze_dataset(df)
     iso_forest_suggestion = suggestions.get("Outliers", None)
 
@@ -155,7 +163,6 @@ def display_outliers(df):
         st.info(f"**Isolation Forest:** {iso_forest_suggestion['message']}")
         st.info(f"**Isolation Forest Recommendation:** {iso_forest_suggestion['recommendation']}")
         
-        # --- Other Outlier Detection Methods ---
         st.markdown("#### Other Outlier Detection Methods")
         
         # IQR Detection
@@ -176,23 +183,20 @@ def display_outliers(df):
         else:
             st.info("**Z-Score Method:** No significant outliers detected.")
 
-        # --- Visualizations (Boxplots are here, others will be in a dedicated section) ---
         st.markdown("### 📊 Boxplots")
-        # Boxplot saving happens within eda_core.detect_outliers
+
         if not df.select_dtypes(include=np.number).empty:
-             # Display saved boxplots
+             
             outliers_iqr_for_display = eda_core.detect_outliers(df, output_dir="reports/boxplots") # Rerun to ensure plots are saved if not already
             for col in outliers_iqr_for_display:
                  img_path = f"reports/boxplots/boxplot_{col}.png"
                  if os.path.exists(img_path):
-                     # Use use_container_width instead of deprecated use_column_width
                      st.image(img_path, caption=f"Boxplot for {col}", use_container_width=True)
         else:
              st.warning("⚠️ No numerical columns found for outlier visualization.")
 
-        # --- Handle Outliers Section (Existing) ---
         st.markdown("### 🧹 Handle Outliers")
-        # Create tabs for different handling strategies
+        
         tab1, tab2 = st.tabs(["⚙️ Manual Settings", "📈 Preview"])
         
         with tab1:
@@ -205,17 +209,22 @@ def display_outliers(df):
             
             if strategy == "custom":
                 custom_value = st.text_input("Enter custom value to replace outliers:")
-                # Ensure custom_value is a valid number if replacing numerical outliers
                 try:
                     custom_value = float(custom_value)
                 except ValueError:
-                    custom_value = None # Or handle as an error
+                    custom_value = None 
                     st.warning("Please enter a valid number for custom replacement.")
 
                 if st.button("Apply Custom Value", key="apply_custom_outlier"):
                      if custom_value is not None:
                         df = auto_analyzer.handle_outliers(df, strategy='custom', custom_value=custom_value)
                         st.success("Applied custom value outlier handling")
+                        st.session_state['transformations_log'].append({
+                            'action_type': 'outlier_handling',
+                            'columns': [col],
+                            'parameters': {'strategy': strategy, 'custom_value': custom_value},
+                            'timestamp': datetime.datetime.now().isoformat()
+                        })
                      else:
                          st.error("Invalid custom value entered.")
                          
@@ -227,9 +236,7 @@ def display_outliers(df):
         with tab2:
             st.markdown("#### 📈 Data Preview")
             st.dataframe(df.head())
-            # Optionally show outlier detection results again after handling
-            # This might require re-running detection on the modified DF
-            # For now, just show the head
+            
             st.info("Preview shows the first few rows after outlier handling.")
 
     else:
@@ -241,13 +248,13 @@ def display_outliers(df):
 def display_visualizations(df):
     st.subheader("📊 Data Visualizations")
     
-    # Ensure reports directory exists
+    
     output_dir = "reports/visualizations"
     os.makedirs(output_dir, exist_ok=True)
     
     column_types = eda_core.classify_column_types(df)
     
-    # Histograms for Numerical Columns
+    
     st.markdown("#### Histograms (Numerical Features)")
     num_cols = [col for col, col_type in column_types.items() if col_type == 'Numerical']
     if num_cols:
@@ -259,7 +266,7 @@ def display_visualizations(df):
     else:
         st.info("No numerical columns to display histograms.")
 
-    # Bar Charts for Categorical Columns
+    
     st.markdown("#### Bar Charts (Categorical Features)")
     cat_cols = [col for col, col_type in column_types.items() if col_type == 'Categorical']
     if cat_cols:
@@ -271,7 +278,7 @@ def display_visualizations(df):
     else:
         st.info("No categorical columns to display bar charts.")
 
-    # Correlation Heatmap
+    
     st.markdown("#### Correlation Heatmap")
     if num_cols and len(num_cols) > 1:
         eda_core.save_correlation_heatmap(df, output_dir)
@@ -421,6 +428,39 @@ def export_cleaned_data(df):
                       mime="text/csv")
 
 
+def export_html_report_section(df):
+    st.subheader("📄 Export/Download Full EDA & Cleaning Report")
+    if st.button("Generate HTML Report", key="generate_html_report"):
+        report_data = report_builder.generate_eda_report_data(df)
+        transformations_log = st.session_state.get('transformations_log', [])
+        html_path = report_builder.build_html_report(report_data, transformations_log)
+        st.session_state['last_html_report_path'] = html_path
+        st.success(f"Report generated: {html_path}")
+    if 'last_html_report_path' in st.session_state:
+        with open(st.session_state['last_html_report_path'], 'r', encoding='utf-8') as f:
+            html_content = f.read()
+        st.download_button(
+            label="Download HTML Report",
+            data=html_content,
+            file_name="AutoEDA_Report.html",
+            mime="text/html"
+        )
+        # PDF Export Section
+        if st.button("Generate PDF Report", key="generate_pdf_report"):
+            pdf_path = report_builder.build_pdf_report(st.session_state['last_html_report_path'])
+            st.session_state['last_pdf_report_path'] = pdf_path
+            st.success(f"PDF report generated: {pdf_path}")
+        if 'last_pdf_report_path' in st.session_state:
+            with open(st.session_state['last_pdf_report_path'], 'rb') as f:
+                pdf_content = f.read()
+            st.download_button(
+                label="Download PDF Report",
+                data=pdf_content,
+                file_name="AutoEDA_Report.pdf",
+                mime="application/pdf"
+            )
+
+
 if uploaded_file:
     try:  # Add try-except for error handling
         filepath = os.path.join("data", uploaded_file.name)
@@ -500,6 +540,7 @@ if uploaded_file:
         # The separate display of AI suggestions is removed as they are shown within the handling tabs
 
         export_cleaned_data(df)
+        export_html_report_section(df)
 
     except Exception as e:
         st.error(f"An error occurred: {e}")

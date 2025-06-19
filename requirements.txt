@@ -6,3 +6,4 @@ seaborn
 pdfkit
 scikit-learn
 missingno
+weasyprint>=60.0
