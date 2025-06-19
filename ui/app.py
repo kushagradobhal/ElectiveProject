@@ -6,12 +6,17 @@ import numpy as np
 import missingno as msno 
 import matplotlib.pyplot as plt
 import datetime
+import glob
 
+# Initialize the transformations log in session state if not present
+if 'transformations_log' not in st.session_state:
+    st.session_state['transformations_log'] = []
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from src import eda_core
 from src import auto_analyzer  
 from src import report_builder 
+from src.auto_analyzer import generate_cleaning_config, save_cleaning_config, load_cleaning_config, apply_cleaning_config
 
 st.set_page_config(page_title="AutoEDA – AI-Powered Data Cleaner", layout="wide")
 st.title("📊 AutoEDA – Smart Data Cleaning & Report Generator")
@@ -60,21 +65,21 @@ def display_missing_values(df):
         
         st.write("**Missing Values Matrix:**")
         
-        matrix_plot = msno.matrix(df, figsize=(10, 4))
-        matrix_plot_path = "reports/missingno_matrix.png"
-       
-        os.makedirs("reports", exist_ok=True)
-        matrix_plot.get_figure().savefig(matrix_plot_path)
-        st.image(matrix_plot_path, use_container_width=True)
-        plt.close(matrix_plot.get_figure()) 
+        # matrix_plot = msno.matrix(df, figsize=(10, 4))
+        # matrix_plot_path = "reports/missingno_matrix.png"
+        #
+        # os.makedirs("reports", exist_ok=True)
+        # matrix_plot.get_figure().savefig(matrix_plot_path)
+        # st.image(matrix_plot_path, use_container_width=True)
+        # plt.close(matrix_plot.get_figure()) 
 
        
         st.write("**Missing Values Bar Chart:**")
-        bar_plot = msno.bar(df, figsize=(10, 4))
-        bar_plot_path = "reports/missingno_bar.png"
-        bar_plot.get_figure().savefig(bar_plot_path)
-        st.image(bar_plot_path, use_container_width=True)
-        plt.close(bar_plot.get_figure()) 
+        # bar_plot = msno.bar(df, figsize=(10, 4))
+        # bar_plot_path = "reports/missingno_bar.png"
+        # bar_plot.get_figure().savefig(bar_plot_path)
+        # st.image(bar_plot_path, use_container_width=True)
+        # plt.close(bar_plot.get_figure()) 
         
         
         st.markdown("### 🧹 Handle Missing Data")
@@ -95,16 +100,22 @@ def display_missing_values(df):
                     
                     if st.button(f"Apply Recommendation for {col}", key=f"apply_{col}"):
                         if "KNN" in suggestion['recommendation']:
-                            df = auto_analyzer.handle_missing_values(df, strategy='knn')
+                            strategy = 'knn'
+                            df = auto_analyzer.handle_missing_values(df, strategy=strategy)
                         elif "mean" in suggestion['recommendation'].lower():
-                            df = auto_analyzer.handle_missing_values(df, strategy='mean')
+                            strategy = 'mean'
+                            df = auto_analyzer.handle_missing_values(df, strategy=strategy)
                         elif "mode" in suggestion['recommendation'].lower():
-                            df = auto_analyzer.handle_missing_values(df, strategy='mode')
+                            strategy = 'mode'
+                            df = auto_analyzer.handle_missing_values(df, strategy=strategy)
+                        else:
+                            strategy = 'auto'
+                            df = auto_analyzer.handle_missing_values(df, strategy=strategy)
                         st.success(f"Applied recommendation for {col}")
                         st.session_state['transformations_log'].append({
                             'action_type': 'impute',
                             'columns': [col],
-                            'parameters': {'strategy': strategy, 'custom_value': custom_value if strategy == 'custom' else None},
+                            'parameters': {'strategy': strategy, 'custom_value': None},
                             'timestamp': datetime.datetime.now().isoformat()
                         })
         
@@ -189,9 +200,10 @@ def display_outliers(df):
              
             outliers_iqr_for_display = eda_core.detect_outliers(df, output_dir="reports/boxplots") # Rerun to ensure plots are saved if not already
             for col in outliers_iqr_for_display:
-                 img_path = f"reports/boxplots/boxplot_{col}.png"
-                 if os.path.exists(img_path):
-                     st.image(img_path, caption=f"Boxplot for {col}", use_container_width=True)
+                 # img_path = f"reports/boxplots/boxplot_{col}.png"
+                 # if os.path.exists(img_path):
+                 #     st.image(img_path, caption=f"Boxplot for {col}", use_container_width=True)
+                 pass
         else:
              st.warning("⚠️ No numerical columns found for outlier visualization.")
 
@@ -260,9 +272,9 @@ def display_visualizations(df):
     if num_cols:
         for col in num_cols:
             eda_core.save_histogram(df, col, output_dir)
-            img_path = os.path.join(output_dir, f"histogram_{col}.png")
-            if os.path.exists(img_path):
-                st.image(img_path, caption=f"Histogram of {col}", use_container_width=True)
+            # img_path = os.path.join(output_dir, f"histogram_{col}.png")
+            # if os.path.exists(img_path):
+            #     st.image(img_path, caption=f"Histogram of {col}", use_container_width=True)
     else:
         st.info("No numerical columns to display histograms.")
 
@@ -272,9 +284,9 @@ def display_visualizations(df):
     if cat_cols:
         for col in cat_cols:
             eda_core.save_bar_chart(df, col, output_dir)
-            img_path = os.path.join(output_dir, f"bar_chart_{col}.png")
-            if os.path.exists(img_path):
-                 st.image(img_path, caption=f"Bar Chart of {col}", use_container_width=True)
+            # img_path = os.path.join(output_dir, f"bar_chart_{col}.png")
+            # if os.path.exists(img_path):
+            #      st.image(img_path, caption=f"Bar Chart of {col}", use_container_width=True)
     else:
         st.info("No categorical columns to display bar charts.")
 
@@ -282,9 +294,9 @@ def display_visualizations(df):
     st.markdown("#### Correlation Heatmap")
     if num_cols and len(num_cols) > 1:
         eda_core.save_correlation_heatmap(df, output_dir)
-        img_path = os.path.join(output_dir, "correlation_heatmap.png")
-        if os.path.exists(img_path):
-             st.image(img_path, caption="Correlation Heatmap", use_container_width=True)
+        # img_path = os.path.join(output_dir, "correlation_heatmap.png")
+        # if os.path.exists(img_path):
+        #      st.image(img_path, caption="Correlation Heatmap", use_container_width=True)
     else:
         st.info("Not enough numerical columns (at least 2) to display a correlation heatmap.")
 
@@ -292,9 +304,9 @@ def display_visualizations(df):
     st.markdown("#### Pairplot")
     if num_cols and len(num_cols) > 1:
         eda_core.save_pairplot(df, output_dir)
-        img_path = os.path.join(output_dir, "pairplot.png")
-        if os.path.exists(img_path):
-             st.image(img_path, caption="Pairplot", use_container_width=True)
+        # img_path = os.path.join(output_dir, "pairplot.png")
+        # if os.path.exists(img_path):
+        #      st.image(img_path, caption="Pairplot", use_container_width=True)
     else:
         st.info("Not enough numerical columns (at least 2) to display a pairplot.")
 
@@ -479,6 +491,34 @@ if uploaded_file:
             auto_analyzer.train_models(df.copy())  # Train models on the uploaded data
         st.success("✅ AI Models Trained!")
 
+        # Generate all visualization images for report (but do not display in UI)
+        output_dir = "reports/visualizations"
+        os.makedirs(output_dir, exist_ok=True)
+        boxplot_dir = "reports/boxplots"
+        os.makedirs(boxplot_dir, exist_ok=True)
+        # Generate histograms and boxplots for numerical columns
+        num_cols = [col for col, col_type in eda_core.classify_column_types(df).items() if col_type == 'Numerical']
+        for col in num_cols:
+            eda_core.save_histogram(df, col, output_dir)
+            eda_core.save_boxplot(df, col, boxplot_dir)
+        # Generate bar charts for categorical columns
+        cat_cols = [col for col, col_type in eda_core.classify_column_types(df).items() if col_type == 'Categorical']
+        for col in cat_cols:
+            eda_core.save_bar_chart(df, col, output_dir)
+        # Generate heatmap and pairplot if enough numerical columns
+        if len(num_cols) > 1:
+            eda_core.save_correlation_heatmap(df, output_dir)
+            eda_core.save_pairplot(df, output_dir)
+        # Generate missingno plots
+        matrix_plot = msno.matrix(df, figsize=(10, 4))
+        matrix_plot_path = "reports/missingno_matrix.png"
+        matrix_plot.get_figure().savefig(matrix_plot_path)
+        plt.close(matrix_plot.get_figure())
+        bar_plot = msno.bar(df, figsize=(10, 4))
+        bar_plot_path = "reports/missingno_bar.png"
+        bar_plot.get_figure().savefig(bar_plot_path)
+        plt.close(bar_plot.get_figure())
+
         # Generate EDA Report Data
         st.subheader("📊 EDA Report")
         eda_report_data = report_builder.generate_eda_report_data(df)
@@ -523,9 +563,9 @@ if uploaded_file:
             st.info("Z-Score Method: No significant outliers detected.")
 
         # Display Visualizations (still generated and displayed separately as they are images)
-        display_missing_values(df) # This now only displays missing value visualizations
+        display_missing_values(df) # Restore missing value handling controls in the UI
         df = display_outliers(df) # This now only displays boxplots and handle outliers section, and returns the potentially modified df
-        display_visualizations(df)
+        # display_visualizations(df)
 
         # Display Custom Column Operations
         df = display_custom_column_operations(df) # Call the new custom operations function
@@ -541,6 +581,44 @@ if uploaded_file:
 
         export_cleaned_data(df)
         export_html_report_section(df)
+
+        # Dedicated Visualizations Tab/Expander
+        with st.expander("📊 Show All Visualizations (New Tab)"):
+            st.markdown("### All Visualizations")
+            viz_tab = st.tabs(["Visualizations"])[0]
+            with viz_tab:
+                # Boxplots
+                st.subheader("Boxplots")
+                for img in sorted(glob.glob("reports/boxplots/boxplot_*.png")):
+                    st.image(img, caption=img.split("/")[-1], use_column_width=True)
+
+                # Histograms
+                st.subheader("Histograms")
+                for img in sorted(glob.glob("reports/visualizations/histogram_*.png")):
+                    st.image(img, caption=img.split("/")[-1], use_column_width=True)
+
+                # Bar Charts
+                st.subheader("Bar Charts")
+                for img in sorted(glob.glob("reports/visualizations/bar_chart_*.png")):
+                    st.image(img, caption=img.split("/")[-1], use_column_width=True)
+
+                # Missingno Plots
+                st.subheader("Missing Value Visualizations")
+                for img in ["reports/missingno_matrix.png", "reports/missingno_bar.png"]:
+                    if os.path.exists(img):
+                        st.image(img, caption=img.split("/")[-1], use_column_width=True)
+
+                # Heatmap
+                st.subheader("Correlation Heatmap")
+                heatmap_img = "reports/visualizations/correlation_heatmap.png"
+                if os.path.exists(heatmap_img):
+                    st.image(heatmap_img, caption="correlation_heatmap.png", use_column_width=True)
+
+                # Pairplot
+                st.subheader("Pairplot")
+                pairplot_img = "reports/visualizations/pairplot.png"
+                if os.path.exists(pairplot_img):
+                    st.image(pairplot_img, caption="pairplot.png", use_column_width=True)
 
     except Exception as e:
         st.error(f"An error occurred: {e}")

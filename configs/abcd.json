@@ -1,0 +1,14 @@
+{
+    "missing_values": {
+        "strategy": null
+    },
+    "outliers": {
+        "strategy": null
+    },
+    "custom_operations": {
+        "drop_columns": [],
+        "type_conversions": [],
+        "rename_columns": []
+    },
+    "transformations_log": []
+}

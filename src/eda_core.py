@@ -161,6 +161,7 @@ def detect_outliers(df, output_dir):
         return {}
 
 
+
 def save_boxplot(df, col, output_dir):
     """Saves a boxplot for a column."""
     try:
@@ -233,3 +234,29 @@ def save_bar_chart(df, col, output_dir, top_n=10):
         plt.close()
     except Exception as e:
         print(f"Error in save_bar_chart for {col}: {e}")
+
+def save_correlation_heatmap(df, output_dir):
+    """
+    Saves a correlation heatmap for numerical columns.
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    corr = df.select_dtypes(include='number').corr()
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(corr, annot=True, fmt=".2f", cmap="coolwarm")
+    plt.title("Correlation Heatmap")
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_dir, "correlation_heatmap.png"))
+    plt.close()
+
+def save_pairplot(df, output_dir):
+    """
+    Saves a pairplot for numerical columns.
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    num_cols = df.select_dtypes(include='number').columns
+    if len(num_cols) > 1:
+        plt.figure()
+        pairplot = sns.pairplot(df[num_cols].dropna())
+        pairplot.fig.suptitle('Pairplot of Numerical Features', y=1.02)
+        pairplot.savefig(os.path.join(output_dir, "pairplot.png"))
+        plt.close()

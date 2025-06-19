@@ -1,0 +1,492 @@
+<html><head><title>AutoEDA Report</title></head><body>
+<h1>AutoEDA EDA & Cleaning Report</h1>
+<h2>Generated: 2025-06-19 09:44:27</h2>
+<h2>Dataset Overview</h2>
+<ul>
+<li><b>Shape:</b> (891, 12)</li>
+<li><b>Columns:</b> ['PassengerId', 'Survived', 'Pclass', 'Name', 'Sex', 'Age', 'SibSp', 'Parch', 'Ticket', 'Fare', 'Cabin', 'Embarked']</li>
+<li><b>Data Types:</b> {'PassengerId': 'int64', 'Survived': 'int64', 'Pclass': 'int64', 'Name': 'object', 'Sex': 'object', 'Age': 'float64', 'SibSp': 'int64', 'Parch': 'int64', 'Ticket': 'object', 'Fare': 'float64', 'Cabin': 'object', 'Embarked': 'object'}</li>
+</ul>
+<h3>Column Types</h3>
+<ul>
+<li><b>PassengerId:</b> Numerical</li>
+<li><b>Survived:</b> Numerical</li>
+<li><b>Pclass:</b> Numerical</li>
+<li><b>Name:</b> Text</li>
+<li><b>Sex:</b> Categorical</li>
+<li><b>Age:</b> Numerical</li>
+<li><b>SibSp:</b> Numerical</li>
+<li><b>Parch:</b> Numerical</li>
+<li><b>Ticket:</b> Text</li>
+<li><b>Fare:</b> Numerical</li>
+<li><b>Cabin:</b> Text</li>
+<li><b>Embarked:</b> Categorical</li>
+</ul>
+<h2>Summary Statistics</h2>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>PassengerId</th>
+      <th>Survived</th>
+      <th>Pclass</th>
+      <th>Name</th>
+      <th>Sex</th>
+      <th>Age</th>
+      <th>SibSp</th>
+      <th>Parch</th>
+      <th>Ticket</th>
+      <th>Fare</th>
+      <th>Cabin</th>
+      <th>Embarked</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>Data Type</th>
+      <td>int64</td>
+      <td>int64</td>
+      <td>int64</td>
+      <td>object</td>
+      <td>object</td>
+      <td>float64</td>
+      <td>int64</td>
+      <td>int64</td>
+      <td>object</td>
+      <td>float64</td>
+      <td>object</td>
+      <td>object</td>
+    </tr>
+    <tr>
+      <th>Classified Type</th>
+      <td>Numerical</td>
+      <td>Numerical</td>
+      <td>Numerical</td>
+      <td>Text</td>
+      <td>Categorical</td>
+      <td>Numerical</td>
+      <td>Numerical</td>
+      <td>Numerical</td>
+      <td>Text</td>
+      <td>Numerical</td>
+      <td>Text</td>
+      <td>Categorical</td>
+    </tr>
+    <tr>
+      <th>Non-Null Count</th>
+      <td>891</td>
+      <td>891</td>
+      <td>891</td>
+      <td>891</td>
+      <td>891</td>
+      <td>714</td>
+      <td>891</td>
+      <td>891</td>
+      <td>891</td>
+      <td>891</td>
+      <td>204</td>
+      <td>889</td>
+    </tr>
+    <tr>
+      <th>Null Count</th>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>177</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>687</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <th>Null Percentage (%)</th>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>19.86532</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>77.104377</td>
+      <td>0.224467</td>
+    </tr>
+    <tr>
+      <th>Unique Count</th>
+      <td>891</td>
+      <td>2</td>
+      <td>3</td>
+      <td>891</td>
+      <td>2</td>
+      <td>88</td>
+      <td>7</td>
+      <td>7</td>
+      <td>681</td>
+      <td>248</td>
+      <td>147</td>
+      <td>3</td>
+    </tr>
+    <tr>
+      <th>Duplicate Count</th>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>Mean</th>
+      <td>446.0</td>
+      <td>0.383838</td>
+      <td>2.308642</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>29.699118</td>
+      <td>0.523008</td>
+      <td>0.381594</td>
+      <td>NaN</td>
+      <td>32.204208</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>Median</th>
+      <td>446.0</td>
+      <td>0.0</td>
+      <td>3.0</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>28.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>NaN</td>
+      <td>14.4542</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>Standard Deviation</th>
+      <td>257.353842</td>
+      <td>0.486592</td>
+      <td>0.836071</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>14.526497</td>
+      <td>1.102743</td>
+      <td>0.806057</td>
+      <td>NaN</td>
+      <td>49.693429</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>Min</th>
+      <td>1.0</td>
+      <td>0.0</td>
+      <td>1.0</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>0.42</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>NaN</td>
+      <td>0.0</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>Max</th>
+      <td>891.0</td>
+      <td>1.0</td>
+      <td>3.0</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>80.0</td>
+      <td>8.0</td>
+      <td>6.0</td>
+      <td>NaN</td>
+      <td>512.3292</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>Skewness</th>
+      <td>0.0</td>
+      <td>0.478523</td>
+      <td>-0.630548</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>0.389108</td>
+      <td>3.695352</td>
+      <td>2.749117</td>
+      <td>NaN</td>
+      <td>4.787317</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>Kurtosis</th>
+      <td>-1.2</td>
+      <td>-1.775005</td>
+      <td>-1.280015</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>0.178274</td>
+      <td>17.88042</td>
+      <td>9.778125</td>
+      <td>NaN</td>
+      <td>33.398141</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>Most Frequent Value</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>Abbing, Mr. Anthony</td>
+      <td>male</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1601</td>
+      <td>NaN</td>
+      <td>B96 B98</td>
+      <td>S</td>
+    </tr>
+    <tr>
+      <th>Frequency</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1.0</td>
+      <td>577.0</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>7.0</td>
+      <td>NaN</td>
+      <td>4.0</td>
+      <td>644.0</td>
+    </tr>
+  </tbody>
+</table>
+<h2>Missing Values Analysis</h2>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Cabin</th>
+      <th>Age</th>
+      <th>Embarked</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>Missing Values</th>
+      <td>687.000000</td>
+      <td>177.00000</td>
+      <td>2.000000</td>
+    </tr>
+    <tr>
+      <th>Percentage (%)</th>
+      <td>77.104377</td>
+      <td>19.86532</td>
+      <td>0.224467</td>
+    </tr>
+  </tbody>
+</table>
+<h2>Outlier Detection</h2>
+<h4>Outliers Isolation Forest</h4>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>0</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>count</th>
+      <td>45</td>
+    </tr>
+    <tr>
+      <th>message</th>
+      <td>45 rows may be outliers (Isolation Forest).</td>
+    </tr>
+    <tr>
+      <th>recommendation</th>
+      <td>Consider removing or investigating these outliers.</td>
+    </tr>
+  </tbody>
+</table>
+<h4>Outliers Iqr</h4>
+<i>No outliers detected or not applicable.</i>
+<h4>Outliers Zscore</h4>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>0</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>Age</th>
+      <td>2</td>
+    </tr>
+    <tr>
+      <th>SibSp</th>
+      <td>30</td>
+    </tr>
+    <tr>
+      <th>Parch</th>
+      <td>15</td>
+    </tr>
+    <tr>
+      <th>Fare</th>
+      <td>20</td>
+    </tr>
+  </tbody>
+</table>
+<h2>Density Summaries</h2>
+<ul>
+<li><b>PassengerId:</b> Approximately 50% of values in 'PassengerId' are concentrated between 223.50 and 668.50.</li>
+<li><b>Survived:</b> Approximately 50% of values in 'Survived' are concentrated between 0.00 and 1.00.</li>
+<li><b>Pclass:</b> Approximately 50% of values in 'Pclass' are concentrated between 2.00 and 3.00.</li>
+<li><b>Age:</b> Approximately 50% of values in 'Age' are concentrated between 20.12 and 38.00.</li>
+<li><b>SibSp:</b> Approximately 50% of values in 'SibSp' are concentrated between 0.00 and 1.00.</li>
+<li><b>Parch:</b> Distribution for 'Parch' could not be summarized.</li>
+<li><b>Fare:</b> Approximately 50% of values in 'Fare' are concentrated between 7.91 and 31.00.</li>
+</ul>
+<h2>Cleaning Actions Log</h2>
+<i>No cleaning actions logged.</i>
+<h2>Visualizations</h2>
+<h3>Boxplots</h3>
+<img src='reports/boxplots\boxplot_Age.png' width='400'><br>
+<img src='reports/boxplots\boxplot_Fare.png' width='400'><br>
+<img src='reports/boxplots\boxplot_Parch.png' width='400'><br>
+<img src='reports/boxplots\boxplot_PassengerId.png' width='400'><br>
+<img src='reports/boxplots\boxplot_Pclass.png' width='400'><br>
+<img src='reports/boxplots\boxplot_SibSp.png' width='400'><br>
+<img src='reports/boxplots\boxplot_Survived.png' width='400'><br>
+<img src='reports/boxplots\boxplot_area_mean.png' width='400'><br>
+<img src='reports/boxplots\boxplot_area_se.png' width='400'><br>
+<img src='reports/boxplots\boxplot_area_worst.png' width='400'><br>
+<img src='reports/boxplots\boxplot_avg_glucose_level.png' width='400'><br>
+<img src='reports/boxplots\boxplot_bmi.png' width='400'><br>
+<img src='reports/boxplots\boxplot_compactness_mean.png' width='400'><br>
+<img src='reports/boxplots\boxplot_compactness_se.png' width='400'><br>
+<img src='reports/boxplots\boxplot_compactness_worst.png' width='400'><br>
+<img src='reports/boxplots\boxplot_concave points_mean.png' width='400'><br>
+<img src='reports/boxplots\boxplot_concave points_se.png' width='400'><br>
+<img src='reports/boxplots\boxplot_concavity_mean.png' width='400'><br>
+<img src='reports/boxplots\boxplot_concavity_se.png' width='400'><br>
+<img src='reports/boxplots\boxplot_concavity_worst.png' width='400'><br>
+<img src='reports/boxplots\boxplot_fractal_dimension_mean.png' width='400'><br>
+<img src='reports/boxplots\boxplot_fractal_dimension_se.png' width='400'><br>
+<img src='reports/boxplots\boxplot_fractal_dimension_worst.png' width='400'><br>
+<img src='reports/boxplots\boxplot_heart_disease.png' width='400'><br>
+<img src='reports/boxplots\boxplot_hypertension.png' width='400'><br>
+<img src='reports/boxplots\boxplot_id.png' width='400'><br>
+<img src='reports/boxplots\boxplot_perimeter_mean.png' width='400'><br>
+<img src='reports/boxplots\boxplot_perimeter_se.png' width='400'><br>
+<img src='reports/boxplots\boxplot_perimeter_worst.png' width='400'><br>
+<img src='reports/boxplots\boxplot_radius_mean.png' width='400'><br>
+<img src='reports/boxplots\boxplot_radius_se.png' width='400'><br>
+<img src='reports/boxplots\boxplot_radius_worst.png' width='400'><br>
+<img src='reports/boxplots\boxplot_smoothness_mean.png' width='400'><br>
+<img src='reports/boxplots\boxplot_smoothness_se.png' width='400'><br>
+<img src='reports/boxplots\boxplot_smoothness_worst.png' width='400'><br>
+<img src='reports/boxplots\boxplot_stroke.png' width='400'><br>
+<img src='reports/boxplots\boxplot_symmetry_mean.png' width='400'><br>
+<img src='reports/boxplots\boxplot_symmetry_se.png' width='400'><br>
+<img src='reports/boxplots\boxplot_symmetry_worst.png' width='400'><br>
+<img src='reports/boxplots\boxplot_texture_mean.png' width='400'><br>
+<img src='reports/boxplots\boxplot_texture_se.png' width='400'><br>
+<img src='reports/boxplots\boxplot_texture_worst.png' width='400'><br>
+<h3>Histograms</h3>
+<img src='reports/visualizations\histogram_ALCOHOL CONSUMING.png' width='400'><br>
+<img src='reports/visualizations\histogram_ALLERGY .png' width='400'><br>
+<img src='reports/visualizations\histogram_ANXIETY.png' width='400'><br>
+<img src='reports/visualizations\histogram_Age.png' width='400'><br>
+<img src='reports/visualizations\histogram_CHEST PAIN.png' width='400'><br>
+<img src='reports/visualizations\histogram_CHRONIC DISEASE.png' width='400'><br>
+<img src='reports/visualizations\histogram_COUGHING.png' width='400'><br>
+<img src='reports/visualizations\histogram_FATIGUE .png' width='400'><br>
+<img src='reports/visualizations\histogram_Fare.png' width='400'><br>
+<img src='reports/visualizations\histogram_PEER_PRESSURE.png' width='400'><br>
+<img src='reports/visualizations\histogram_Parch.png' width='400'><br>
+<img src='reports/visualizations\histogram_PassengerId.png' width='400'><br>
+<img src='reports/visualizations\histogram_Pclass.png' width='400'><br>
+<img src='reports/visualizations\histogram_SHORTNESS OF BREATH.png' width='400'><br>
+<img src='reports/visualizations\histogram_SMOKING.png' width='400'><br>
+<img src='reports/visualizations\histogram_SWALLOWING DIFFICULTY.png' width='400'><br>
+<img src='reports/visualizations\histogram_SibSp.png' width='400'><br>
+<img src='reports/visualizations\histogram_Survived.png' width='400'><br>
+<img src='reports/visualizations\histogram_WHEEZING.png' width='400'><br>
+<img src='reports/visualizations\histogram_YELLOW_FINGERS.png' width='400'><br>
+<img src='reports/visualizations\histogram_area_mean.png' width='400'><br>
+<img src='reports/visualizations\histogram_area_se.png' width='400'><br>
+<img src='reports/visualizations\histogram_area_worst.png' width='400'><br>
+<img src='reports/visualizations\histogram_avg_glucose_level.png' width='400'><br>
+<img src='reports/visualizations\histogram_bmi.png' width='400'><br>
+<img src='reports/visualizations\histogram_compactness_mean.png' width='400'><br>
+<img src='reports/visualizations\histogram_compactness_se.png' width='400'><br>
+<img src='reports/visualizations\histogram_compactness_worst.png' width='400'><br>
+<img src='reports/visualizations\histogram_concave points_mean.png' width='400'><br>
+<img src='reports/visualizations\histogram_concave points_se.png' width='400'><br>
+<img src='reports/visualizations\histogram_concave points_worst.png' width='400'><br>
+<img src='reports/visualizations\histogram_concavity_mean.png' width='400'><br>
+<img src='reports/visualizations\histogram_concavity_se.png' width='400'><br>
+<img src='reports/visualizations\histogram_concavity_worst.png' width='400'><br>
+<img src='reports/visualizations\histogram_fractal_dimension_mean.png' width='400'><br>
+<img src='reports/visualizations\histogram_fractal_dimension_se.png' width='400'><br>
+<img src='reports/visualizations\histogram_fractal_dimension_worst.png' width='400'><br>
+<img src='reports/visualizations\histogram_heart_disease.png' width='400'><br>
+<img src='reports/visualizations\histogram_hypertension.png' width='400'><br>
+<img src='reports/visualizations\histogram_id.png' width='400'><br>
+<img src='reports/visualizations\histogram_income.png' width='400'><br>
+<img src='reports/visualizations\histogram_perimeter_mean.png' width='400'><br>
+<img src='reports/visualizations\histogram_perimeter_se.png' width='400'><br>
+<img src='reports/visualizations\histogram_perimeter_worst.png' width='400'><br>
+<img src='reports/visualizations\histogram_radius_mean.png' width='400'><br>
+<img src='reports/visualizations\histogram_radius_se.png' width='400'><br>
+<img src='reports/visualizations\histogram_radius_worst.png' width='400'><br>
+<img src='reports/visualizations\histogram_smoothness_mean.png' width='400'><br>
+<img src='reports/visualizations\histogram_smoothness_se.png' width='400'><br>
+<img src='reports/visualizations\histogram_smoothness_worst.png' width='400'><br>
+<img src='reports/visualizations\histogram_stroke.png' width='400'><br>
+<img src='reports/visualizations\histogram_symmetry_mean.png' width='400'><br>
+<img src='reports/visualizations\histogram_symmetry_se.png' width='400'><br>
+<img src='reports/visualizations\histogram_symmetry_worst.png' width='400'><br>
+<img src='reports/visualizations\histogram_texture_mean.png' width='400'><br>
+<img src='reports/visualizations\histogram_texture_se.png' width='400'><br>
+<img src='reports/visualizations\histogram_texture_worst.png' width='400'><br>
+<h3>Bar Charts</h3>
+<img src='reports/visualizations\bar_chart_Embarked.png' width='400'><br>
+<img src='reports/visualizations\bar_chart_GENDER.png' width='400'><br>
+<img src='reports/visualizations\bar_chart_LUNG_CANCER.png' width='400'><br>
+<img src='reports/visualizations\bar_chart_Residence_type.png' width='400'><br>
+<img src='reports/visualizations\bar_chart_Sex.png' width='400'><br>
+<img src='reports/visualizations\bar_chart_diagnosis.png' width='400'><br>
+<img src='reports/visualizations\bar_chart_ever_married.png' width='400'><br>
+<img src='reports/visualizations\bar_chart_smoking_status.png' width='400'><br>
+<img src='reports/visualizations\bar_chart_work_type.png' width='400'><br>
+<h3>Missing Value Visualizations</h3>
+<img src='reports/missingno_matrix.png' width='400'><br>
+<img src='reports/missingno_bar.png' width='400'><br>
+</body></html>

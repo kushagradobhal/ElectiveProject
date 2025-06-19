@@ -4,6 +4,7 @@ from . import auto_analyzer
 import datetime
 import os
 from weasyprint import HTML
+import glob
 
 def generate_eda_report_data(df):
     """
@@ -40,9 +41,10 @@ def generate_eda_report_data(df):
 
     return report_data
 
-def build_html_report(report_data, transformations_log, before_stats=None, after_stats=None, image_paths=None, output_path="reports/report.html"):
+def build_html_report(report_data, transformations_log, before_stats=None, after_stats=None, output_path="reports/report.html"):
     """
     Builds a comprehensive HTML report from the EDA data, cleaning log, and before/after stats.
+    Automatically includes all visualization images from the reports/ directory and subdirectories.
     """
     html = []
     html.append(f"<html><head><title>AutoEDA Report</title></head><body>")
@@ -67,11 +69,14 @@ def build_html_report(report_data, transformations_log, before_stats=None, after
 
     # Summary Statistics (Before/After)
     html.append("<h2>Summary Statistics</h2>")
+    summary_stats = report_data.get('summary_statistics', {})
+    if summary_stats and isinstance(summary_stats, dict) and any(isinstance(v, dict) for v in summary_stats.values()):
+        html.append(pd.DataFrame.from_dict(summary_stats).to_html())
+    else:
+        html.append("<i>No summary statistics available.</i>")
     if before_stats is not None:
         html.append("<h4>Before Cleaning</h4>")
         html.append(before_stats.to_html())
-    html.append("<h4>After Cleaning</h4>")
-    html.append(pd.DataFrame.from_dict(report_data.get('summary_statistics', {})).to_html())
     if after_stats is not None:
         html.append("<h4>After Cleaning (from log)</h4>")
         html.append(after_stats.to_html())
@@ -79,8 +84,10 @@ def build_html_report(report_data, transformations_log, before_stats=None, after
     # Missing Values
     html.append("<h2>Missing Values Analysis</h2>")
     missing = report_data.get('missing_values', {})
-    if missing:
+    if missing and isinstance(missing, dict) and any(isinstance(v, dict) for v in missing.values()):
         html.append(pd.DataFrame.from_dict(missing).to_html())
+    else:
+        html.append("<i>No missing values data available.</i>")
 
     # Outlier Detection
     html.append("<h2>Outlier Detection</h2>")
@@ -98,8 +105,16 @@ def build_html_report(report_data, transformations_log, before_stats=None, after
     # Density Summaries
     html.append("<h2>Density Summaries</h2>")
     density = report_data.get('density_summaries', {})
-    if density:
+    if density and isinstance(density, dict) and any(isinstance(v, dict) for v in density.values()):
         html.append(pd.DataFrame.from_dict(density).to_html())
+    elif density and isinstance(density, dict):
+        # If it's a dict of strings, show as a list
+        html.append("<ul>")
+        for k, v in density.items():
+            html.append(f"<li><b>{k}:</b> {v}</li>")
+        html.append("</ul>")
+    else:
+        html.append("<i>No density summaries available.</i>")
 
     # Cleaning Actions Log
     html.append("<h2>Cleaning Actions Log</h2>")
@@ -111,12 +126,39 @@ def build_html_report(report_data, transformations_log, before_stats=None, after
     else:
         html.append("<i>No cleaning actions logged.</i>")
 
-    # Visualizations (if provided)
-    if image_paths:
-        html.append("<h2>Visualizations</h2>")
-        for img in image_paths:
+    # Visualizations (auto-collected)
+    html.append("<h2>Visualizations</h2>")
+    # Boxplots
+    boxplots = sorted(glob.glob("reports/boxplots/boxplot_*.png"))
+    if boxplots:
+        html.append("<h3>Boxplots</h3>")
+        for img in boxplots:
             html.append(f"<img src='{img}' width='400'><br>")
-
+    # Histograms
+    histograms = sorted(glob.glob("reports/visualizations/histogram_*.png"))
+    if histograms:
+        html.append("<h3>Histograms</h3>")
+        for img in histograms:
+            html.append(f"<img src='{img}' width='400'><br>")
+    # Bar Charts
+    bar_charts = sorted(glob.glob("reports/visualizations/bar_chart_*.png"))
+    if bar_charts:
+        html.append("<h3>Bar Charts</h3>")
+        for img in bar_charts:
+            html.append(f"<img src='{img}' width='400'><br>")
+    # Missing Value Visualizations
+    missingno_imgs = ["reports/missingno_matrix.png", "reports/missingno_bar.png"]
+    missingno_imgs = [img for img in missingno_imgs if os.path.exists(img)]
+    if missingno_imgs:
+        html.append("<h3>Missing Value Visualizations</h3>")
+        for img in missingno_imgs:
+            html.append(f"<img src='{img}' width='400'><br>")
+    # Heatmaps
+    heatmaps = sorted(glob.glob("reports/heatmaps/*.png"))
+    if heatmaps:
+        html.append("<h3>Heatmaps</h3>")
+        for img in heatmaps:
+            html.append(f"<img src='{img}' width='400'><br>")
     html.append("</body></html>")
 
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -125,5 +167,6 @@ def build_html_report(report_data, transformations_log, before_stats=None, after
     return output_path
 
 def build_pdf_report(html_path, pdf_path="reports/report.pdf"):
-    HTML(html_path).write_pdf(pdf_path)
+    base_url = os.path.dirname(os.path.abspath(html_path))
+    HTML(html_path, base_url=base_url).write_pdf(pdf_path)
     return pdf_path
